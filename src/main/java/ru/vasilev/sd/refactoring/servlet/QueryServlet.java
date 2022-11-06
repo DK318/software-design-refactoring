@@ -1,12 +1,12 @@
 package ru.vasilev.sd.refactoring.servlet;
 
 import ru.vasilev.sd.refactoring.dao.ProductDAO;
+import ru.vasilev.sd.refactoring.util.HTMLResponseMaker;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.sql.SQLException;
 import java.util.Map;
 
@@ -20,33 +20,32 @@ public class QueryServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String command = request.getParameter("command");
         ProductDAO.AggregateQuery query = ProductDAO.AggregateQuery.fromString(command);
-        PrintWriter writer = response.getWriter();
 
         if (query == null) {
-            writer.println("Unknown command: " + command);
+            response.getWriter().println("Unknown command: " + command);
         } else {
             try {
-                writer.println("<html><body>");
                 Map.Entry<String, Long> result = productDAO.aggregate(query);
-                switch (query) {
-                    case MAX:
-                        writer.println("<h1>Product with max price: </h1>");
-                        writer.println(result.getKey() + "\t" + result.getValue().toString() + "</br>");
-                        break;
-                    case MIN:
-                        writer.println("<h1>Product with min price: </h1>");
-                        writer.println(result.getKey() + "\t" + result.getValue().toString() + "</br>");
-                        break;
-                    case SUM:
-                        writer.println("Summary price: ");
-                        writer.println(result.getValue());
-                        break;
-                    case COUNT:
-                        writer.println("Number of products: ");
-                        writer.println(result.getValue());
-                        break;
-                }
-                writer.println("</body></html>");
+                HTMLResponseMaker.withHTMLWrapper(response.getWriter(), writer -> {
+                    switch (query) {
+                        case MAX:
+                            writer.println(HTMLResponseMaker.makeHeader("Product with max price: "));
+                            writer.println(HTMLResponseMaker.makeRow(result.getKey(), result.getValue().toString()));
+                            break;
+                        case MIN:
+                            writer.println(HTMLResponseMaker.makeHeader("Product with min price: "));
+                            writer.println(HTMLResponseMaker.makeRow(result.getKey(), result.getValue().toString()));
+                            break;
+                        case SUM:
+                            writer.println("Summary price: ");
+                            writer.println(result.getValue());
+                            break;
+                        case COUNT:
+                            writer.println("Number of products: ");
+                            writer.println(result.getValue());
+                            break;
+                    }
+                });
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
